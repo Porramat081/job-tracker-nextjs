@@ -1,3 +1,5 @@
+"use client";
+
 import { Column, JobApplication } from "@/lib/models/models.types";
 import { Card, CardContent } from "./ui/card";
 import { Edit2, ExternalLink, MoreVertical, Trash2 } from "lucide-react";
@@ -8,6 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
+import { updateJobApplication } from "@/lib/actions/job-applications-update";
+import EditJobDialog from "./edit-job-dialog";
+import { useState } from "react";
+import { deleteJobApplication } from "@/lib/actions/job-applications-delete";
 
 interface JobApplicationCardProps {
   job: JobApplication;
@@ -18,6 +24,56 @@ export default function JobApplicationCard({
   job,
   columns,
 }: JobApplicationCardProps) {
+  const [isEdit, setIsEdit] = useState(false);
+  const [formData, setFormData] = useState({
+    company: job.company,
+    position: job.position,
+    location: job.location || "",
+    notes: job.notes || "",
+    salary: job.salary || "",
+    jobUrl: job.jobUrl || "",
+    columnId: job.columnId || "",
+    tags: job.tags?.join(", ") || "",
+    description: job.description || "",
+  });
+  async function handleMove(newColumnId: string) {
+    try {
+      const result = await updateJobApplication(job._id, {
+        columnId: newColumnId,
+      });
+    } catch (err) {
+      console.error("Failed to move job application: ", err);
+    }
+  }
+  async function handleUpdate(e: React.SubmitEvent) {
+    e.preventDefault();
+    try {
+      const result = await updateJobApplication(job._id, {
+        ...formData,
+        tags: formData.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
+      });
+
+      if (!result.error) {
+        setIsEdit(false);
+      }
+    } catch (err) {
+      console.error("Failed to update job application: ", err);
+    }
+  }
+  async function handleDelete() {
+    try {
+      const result = await deleteJobApplication(job._id);
+
+      if (result.error) {
+        console.error("Failed to delete job application: ", result.error);
+      }
+    } catch (err) {
+      console.error("Failed to delete job application: ", err);
+    }
+  }
   return (
     <>
       <Card className="cursor-pointer transition-shadow hover:shadow-lg bg-white group shadow-sm">
@@ -69,7 +125,7 @@ export default function JobApplicationCard({
                 />
 
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsEdit(true)}>
                     <Edit2 className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
@@ -78,13 +134,16 @@ export default function JobApplicationCard({
                       {columns
                         .filter((c) => c._id !== job.columnId)
                         .map((column, key) => (
-                          <DropdownMenuItem key={key}>
+                          <DropdownMenuItem
+                            key={key}
+                            onClick={() => handleMove(column._id)}
+                          >
                             Move to {column.name}
                           </DropdownMenuItem>
                         ))}
                     </>
                   )}
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete}>
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -93,6 +152,14 @@ export default function JobApplicationCard({
           </div>
         </CardContent>
       </Card>
+
+      <EditJobDialog
+        isOpen={isEdit}
+        setIsOpen={setIsEdit}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleUpdate}
+      />
     </>
   );
 }

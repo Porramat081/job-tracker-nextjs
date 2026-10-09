@@ -3,6 +3,7 @@
 import { Board } from "@/lib/models/models.types";
 import { Award, Calendar, CheckCircle2, Cross } from "lucide-react";
 import DroppableColumn from "./droppable-column";
+import { useBoard } from "@/lib/hooks/useBoard";
 
 interface KanbanProps {
   userId: string;
@@ -34,7 +35,7 @@ const COLUMN_CONFIG: Array<ColConfig> = [
 ];
 
 export default function KanbanBoard({ board, userId }: KanbanProps) {
-  const columns = board.columns;
+  const { columns, moveJob } = useBoard(board);
   const sortedColumns = columns?.sort((a, b) => a.order - b.order) || [];
   return (
     <>

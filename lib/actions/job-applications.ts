@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/auth";
 import { connectDb } from "../db";
 import { Board, Column, JobApplication } from "../models";
 import { ColumnDeleteIcon } from "@hugeicons/core-free-icons";
+import { revalidatePath } from "next/cache";
 
 interface JobApplicationData {
   company: string;
@@ -78,6 +79,9 @@ export async function createJobApplication(data: JobApplicationData) {
   await Column.findByIdAndUpdate(data.columnId, {
     $push: { jobApplications: jobApplication._id },
   });
+
+  revalidatePath("/dashboard");
+  // revalidate the board page after creating a new job application
 
   return { data: JSON.parse(JSON.stringify(jobApplication)) };
 }
