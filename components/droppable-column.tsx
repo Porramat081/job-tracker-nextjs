@@ -9,6 +9,11 @@ import CreateJobApplicationDialog from "./create-job-dialog";
 import SortableJobCard from "./sortable-job-card";
 import { Column } from "@/lib/models/models.types";
 import { MoreVertical, Trash2 } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface ColConfig {
   color: string;
@@ -26,6 +31,13 @@ export default function DroppableColumn({
   boardId: string;
   sortedColumns: Column[];
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: column._id,
+    data: {
+      type: "column",
+      columnId: column._id,
+    },
+  });
   const sortedJobs =
     column.jobApplications?.sort((a, b) => a.order - b.order) || [];
   return (
@@ -55,17 +67,23 @@ export default function DroppableColumn({
       </CardHeader>
 
       <CardContent
+        ref={setNodeRef}
         className={`space-y-2 pt-4 bg-gray-50/50 min-h-100 rounded-b-lg ${
-          true ? "ring-2 ring-blue-500" : ""
+          isOver ? "ring-2 ring-blue-500" : ""
         }`}
       >
-        {sortedJobs.map((job, key) => (
-          <SortableJobCard
-            key={key}
-            job={{ ...job, columnId: job.columnId || column._id }}
-            columns={sortedColumns}
-          />
-        ))}
+        <SortableContext
+          items={sortedJobs.map((job) => job._id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {sortedJobs.map((job, key) => (
+            <SortableJobCard
+              key={key}
+              job={{ ...job, columnId: job.columnId || column._id }}
+              columns={sortedColumns}
+            />
+          ))}
+        </SortableContext>
         <CreateJobApplicationDialog columnId={column._id} boardId={boardId} />
       </CardContent>
     </Card>
