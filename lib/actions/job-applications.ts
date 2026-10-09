@@ -75,7 +75,7 @@ export async function createJobApplication(data: JobApplicationData) {
     order: maxOrder ? maxOrder.order + 1 : 0,
   });
 
-  await Column.findByIdAndUpdate(ColumnDeleteIcon, {
+  await Column.findByIdAndUpdate(data.columnId, {
     $push: { jobApplications: jobApplication._id },
   });
 

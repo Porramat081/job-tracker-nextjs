@@ -4,17 +4,14 @@ import { getSession } from "@/lib/auth/auth";
 import QuickInitBtn from "@/components/quickInitBtn";
 import KanbanBoard from "@/components/kanbanBoard";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-export default async function Dashboard() {
-  const session = await getSession();
-
-  if (!session?.user) {
-    redirect("/sign-in");
-  }
-
+async function getBoard(userId: string) {
+  "use cache";
+  // just turn this function into a cache component, so that it doesn't re-render on every request
   await connectDb();
-  const board = await Board.findOne({
-    userId: session?.user.id,
+  const boardDoc = await Board.findOne({
+    userId: userId,
     name: "Job Hunt",
   }).populate({
     path: "columns",
@@ -22,6 +19,23 @@ export default async function Dashboard() {
       path: "jobApplications",
     },
   });
+
+  if (!boardDoc) return null;
+
+  const board = JSON.parse(JSON.stringify(boardDoc));
+
+  return board;
+}
+
+async function Dashboard() {
+  const session = await getSession();
+  // cache component can't be used with headers access , so we don't need to turn entire page to cache component
+
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
+
+  const board = await getBoard(session?.user.id);
 
   return (
     <>
@@ -43,12 +57,23 @@ export default async function Dashboard() {
             </div>
           )}
 
-          <KanbanBoard
-            userId={session?.user.id}
-            board={JSON.parse(JSON.stringify(board))}
-          />
+          <KanbanBoard userId={session?.user.id} board={board} />
         </div>
       </div>
     </>
+  );
+}
+
+export default async function DashboardWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          Loading...
+        </div>
+      }
+    >
+      <Dashboard />
+    </Suspense>
   );
 }
